@@ -1,3 +1,7 @@
+<a target="_blank" href="https://colab.research.google.com/github/VatsaDev/xAIhome/blob/main/xai.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 # XAI take home
 
 ## Making a fast videoloader
