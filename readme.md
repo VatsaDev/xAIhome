@@ -18,7 +18,7 @@
      - should work in theory, I been haven't been able to test it due to the way way colab databuilding takes 3+ hrs, and I can't switch between cpu/gpu instances
  - `toycnn.py` is a simple cnn meant to prove that the data is stable and usable, 12669 clips with 6 classes
 
-CNN graph:
+CNN graph:\n\n
 ![image](https://github.com/user-attachments/assets/99d63572-30cd-4912-8ec9-5a810bfcbd8e)
 
 
