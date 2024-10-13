@@ -1,5 +1,3 @@
-# This is VAE feature example code, so it differs from being a pure video loader
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,9 +8,6 @@ from torch.optim.lr_scheduler import StepLR
 import clip
 from PIL import Image
 from diffusers import AutoencoderKL
-from datasets import load_dataset
-import requests
-from tqdm import tqdm
 
 class SimpleNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -28,38 +23,19 @@ class SimpleNN(nn.Module):
         return x
 
 class VidDataset:
-    def __init__(self, dataset_name, clip_model, vae_model, device):
-        self.dataset_name = dataset_name
+    def __init__(self, root_dir, clip_model, vae_model, device):
+        self.root_dir = root_dir
         self.clip_model = clip_model
         self.vae_model = vae_model
         self.device = device
         self.data = self.load_data()
 
     def load_data(self):
-        # Create 'vids' directory if it doesn't exist
-        os.makedirs('vids', exist_ok=True)
-
-        # Load the dataset from Hugging Face
-        dataset = load_dataset(self.dataset_name, split="train")
-
-        # Download videos
-        for item in tqdm(dataset, desc="Downloading videos"):
-            video_url = item['video']
-            video_filename = os.path.join('vids', f"{item['id']}.mp4")
-            
-            if not os.path.exists(video_filename):
-                response = requests.get(video_url, stream=True)
-                with open(video_filename, 'wb') as file:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        file.write(chunk)
-
-        # Process downloaded videos
         data = []
-        for video_file in os.listdir('vids'):
-            if video_file.endswith('.mp4'):
-                crops = self.process_video(video_file)
-                data.extend(crops)
-
+        videos = [f for f in os.listdir(self.root_dir) if f.endswith('.mp4')]
+        for video in videos:
+            crops = self.process_video(video)
+            data.extend(crops)
         return data
 
     def process_video(self, video):
@@ -217,8 +193,7 @@ def main():
     num_epochs = 2
     
     # Load and split dataset
-    # Replace 'your_dataset_name' with the actual name of the Hugging Face dataset you want to use
-    dataset = VidDataset("VatsaDev/Sportsvid", clip_model, vae_model, device)
+    dataset = VidDataset("vid", clip_model, vae_model, device)
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
     test_size = len(dataset) - train_size - val_size
