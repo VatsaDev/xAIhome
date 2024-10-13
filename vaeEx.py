@@ -193,7 +193,7 @@ def main():
     num_epochs = 2
     
     # Load and split dataset
-    dataset = VidDataset("vid", clip_model, vae_model, device)
+    dataset = VidDataset("vids", clip_model, vae_model, device)
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
     test_size = len(dataset) - train_size - val_size
