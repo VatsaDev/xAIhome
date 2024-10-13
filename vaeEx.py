@@ -281,19 +281,6 @@ def main():
     num_epochs = 10
     logging.info(f"Hyperparameters: input_size={input_size}, hidden_size={hidden_size}, output_size={output_size}, lr={lr}, batch_size={batch_size}, num_epochs={num_epochs}")
     
-    # Load and split dataset
-    logging.info("Loading and splitting dataset...")
-    dataset = VidDataset(output_dir)
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size, test_size])
-    
-    train_loader = VidLoader(train_dataset, clip_model, vae_model, device, batch_size=batch_size, shuffle=True)
-    val_loader = VidLoader(val_dataset, clip_model, vae_model, device, batch_size=batch_size)
-    test_loader = VidLoader(test_dataset, clip_model, vae_model, device, batch_size=batch_size)
-    logging.info(f"Dataset split: train={len(train_dataset)}, val={len(val_dataset)}, test={len(test_dataset)}")
-    
     # Initialize model, optimizer, and loss function
     logging.info("Initializing model, optimizer, and loss function...")
     model = SimpleNN(input_size, hidden_size, output_size).to(device)
@@ -304,6 +291,15 @@ def main():
     # Training loop
     logging.info("Starting training loop...")
     for epoch in range(num_epochs):
+        # Create new dataset and loaders for each epoch
+        dataset = VidDataset(output_dir)
+        train_size = int(0.8 * len(dataset))
+        val_size = len(dataset) - train_size
+        train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+        
+        train_loader = VidLoader(train_dataset, clip_model, vae_model, device, batch_size=batch_size, shuffle=True)
+        val_loader = VidLoader(val_dataset, clip_model, vae_model, device, batch_size=batch_size)
+        
         train_loss = train(model, train_loader, optimizer, criterion, device, epoch)
         val_loss = validate(model, val_loader, criterion, device)
         
@@ -313,8 +309,8 @@ def main():
         scheduler.step()
     
     # Final test
-    test_loss = validate(model, test_loader, criterion, device)
-    logging.info(f"Final Test Loss: {test_loss:.4f}")
+    val_loss = validate(model, val_loader, criterion, device)
+    logging.info(f"Final Test Loss: {val_loss:.4f}")
     
     # Save the model
     torch.save(model.state_dict(), "video_prediction_model.pth")
