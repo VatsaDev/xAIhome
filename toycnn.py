@@ -7,6 +7,11 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 import numpy as np
+import logging
+from tqdm import tqdm
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Define the CNN architecture
 class SimpleCNN(nn.Module):
@@ -48,13 +53,15 @@ class VideoFrameDataset(Dataset):
 
 # Function to process video clips and create dataset
 def process_video_clips(input_folder, output_folder):
+    logging.info(f"Processing video clips from {input_folder}")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+        logging.info(f"Created output folder: {output_folder}")
 
     dataset = []
     class_names = set()
 
-    for filename in os.listdir(input_folder):
+    for filename in tqdm(os.listdir(input_folder), desc="Processing videos"):
         if filename.endswith(('.mp4', '.avi', '.mov')):  # Add more video formats if needed
             video_path = os.path.join(input_folder, filename)
             label = filename.split('_')[0]
@@ -72,24 +79,29 @@ def process_video_clips(input_folder, output_folder):
             cap.release()
 
             if frames:
-                # Combine all frames into one image (you might want to adjust this based on your needs)
                 combined_frame = np.hstack(frames)
                 output_filename = f"{filename[:-4]}.jpg"
                 output_path = os.path.join(output_folder, output_filename)
                 cv2.imwrite(output_path, combined_frame)
 
                 dataset.append((output_path, label))
+                logging.info(f"Processed {filename} - Label: {label}")
 
+    logging.info(f"Processed {len(dataset)} videos with {len(class_names)} unique classes")
     return dataset, list(class_names)
 
 # Main training function
 def train_cnn(input_folder, output_folder):
+    logging.info("Starting CNN training process")
+    
     # Process video clips
     dataset, class_names = process_video_clips(input_folder, output_folder)
     num_classes = len(class_names)
+    logging.info(f"Number of classes: {num_classes}")
 
     # Split dataset into train and validation sets
     train_data, val_data = train_test_split(dataset, test_size=0.1, random_state=42)
+    logging.info(f"Train set size: {len(train_data)}, Validation set size: {len(val_data)}")
 
     # Define transforms
     transform = transforms.Compose([
@@ -103,11 +115,13 @@ def train_cnn(input_folder, output_folder):
     train_dataset = VideoFrameDataset(train_data, transform=transform)
     val_dataset = VideoFrameDataset(val_data, transform=transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
     # Initialize the model, loss function, and optimizer
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logging.info(f"Using device: {device}")
+    
     model = SimpleCNN(num_classes).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -116,7 +130,8 @@ def train_cnn(input_folder, output_folder):
     num_epochs = 2
     for epoch in range(num_epochs):
         model.train()
-        for i, (inputs, labels) in enumerate(train_loader):
+        total_loss = 0
+        for i, (inputs, labels) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}")):
             inputs = inputs.to(device)
             labels = torch.tensor([class_names.index(label) for label in labels]).to(device)
 
@@ -126,9 +141,13 @@ def train_cnn(input_folder, output_folder):
             loss.backward()
             optimizer.step()
 
-            print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}")
+            total_loss += loss.item()
 
             if (i + 1) % 10 == 0:
+                avg_loss = total_loss / 10
+                logging.info(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Avg Loss: {avg_loss:.4f}")
+                total_loss = 0
+
                 model.eval()
                 with torch.no_grad():
                     val_loss = 0
@@ -138,10 +157,10 @@ def train_cnn(input_folder, output_folder):
                         val_outputs = model(val_inputs)
                         val_loss += criterion(val_outputs, val_labels).item()
                     val_loss /= len(val_loader)
-                    print(f"Validation Loss: {val_loss:.4f}")
+                    logging.info(f"Validation Loss: {val_loss:.4f}")
                 model.train()
 
-    print("Training completed!")
+    logging.info("Training completed!")
 
 # Example usage
 input_folder = "clips2"
