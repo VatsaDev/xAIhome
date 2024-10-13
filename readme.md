@@ -7,6 +7,12 @@
      -  I tested `dataload.py` 3 times, with 20 workers(1 core per worker), it takes ~1900-2000s to process ~12000 video clips, or 6-6.3 clips per second
      -  speed scales around workers, 10 workers took 3000s, 3.5 clips/s, and 2 workers takes 3-4 hrs, 0.83-1.11 clips/s
      -  on a standard 16 core instance, this workload would be ~2400s, or ~4.5 videos/s
+ - `vaeEx.py` is my take on the "consider how to integrate it with training, e.g. overlapping data loading with training" and the VAE+Clip feature example
+     - it takes data in the form `(vae_feat_1, clip_feat, vae_feat_2)` and the vae_feats are the vae features of video pairs, this is a simple NN predicting future VAE feats using current VAE feat and Clip feat
+     - with the dataloader in the training process, new random crops can be made on the videos each time, better data augumentation for the neural net, and it all the files are temp in ram rather than saved/extras 
+     - most of my videos were 640x360, so I made 3 256x256 crops of each one, so each one is unique but with some overlap, ensuring uniqueness and continuity of contextual information across the clips
+     - should work in theory, I been haven't been able to test it due to the way way colab databuilding takes 3+ hrs, and I can't switch between cpu/gpu instances
+ - `toycnn.py` is a simple cnn meant to prove that the data is stable and usable, 12669 clips with 6 classes
 
 Mentions:
 
