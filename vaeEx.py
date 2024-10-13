@@ -218,7 +218,7 @@ def main():
     
     # Load and split dataset
     # Replace 'your_dataset_name' with the actual name of the Hugging Face dataset you want to use
-    dataset = VidDataset("your_dataset_name", clip_model, vae_model, device)
+    dataset = VidDataset("VatsaDev/Sportsvid", clip_model, vae_model, device)
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
     test_size = len(dataset) - train_size - val_size
